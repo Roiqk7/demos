@@ -60,7 +60,7 @@ class Queen {
         Queen(int &row, int &col) {
             this->row = row;
             this->col = col;
-            if (!goldQueenTexture.loadFromFile("/Users/roiqk/Desktop/Programming/C:C++/C++/NumeroDuo/Assets/goldQueen.png")) std::exit(0);
+            if (!goldQueenTexture.loadFromFile("/assets/goldQueen.png")) std::exit(0);
         } 
 
         void render() {
