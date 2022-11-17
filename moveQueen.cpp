@@ -23,13 +23,6 @@
 //  colors
 #define LIGHT_GREY sf::Color{192, 192, 192, 127}
 
-//  shortcuts
-#define CHECK_QUEEN_DIAGONALS       row + col == queen.row + queen.col || row - col == queen.row - queen.col
-#define CHECK_MOUSEY_AND_Q_ROW      mousePos.y > queen.row*TILE_SIZE && mousePos.y < queen.row*TILE_SIZE+TILE_SIZE
-#define CHECK_MOUSEX_AND_Q_COL      mousePos.x > queen.col*TILE_SIZE && mousePos.x < queen.col*TILE_SIZE+TILE_SIZE
-#define CHECK_MOUSE_XY_AND_ROW_COL  mousePos.x > col*TILE_SIZE && mousePos.x < col*TILE_SIZE+TILE_SIZE && mousePos.y > row*TILE_SIZE && mousePos.y < row*TILE_SIZE+TILE_SIZE
-
-
 // create the window     
 sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Move Queen");
 
@@ -60,7 +53,7 @@ class Queen {
         Queen(int &row, int &col) {
             this->row = row;
             this->col = col;
-            if (!goldQueenTexture.loadFromFile("/assets/goldQueen.png")) std::exit(0);
+            if (!goldQueenTexture.loadFromFile("/Users/roiqk/Desktop/Programming/C:C++/C++/NumeroDuo/Assets/goldQueen.png")) std::exit(0);
         } 
 
         void render() {
@@ -75,7 +68,7 @@ class Queen {
 //  Board stores all important data and renders the actual board seen by the user
 class Board {
     public:
-        std::array<std::array<sf::RectangleShape, N>, N> boardTiles; 
+        std::array<std::array<sf::RectangleShape, N>, N> boardTiles;    
         sf::Vector2i mousePos;
         sf::CircleShape dot;
         bool highlight;
@@ -120,7 +113,7 @@ class Board {
                                                      row*TILE_SIZE+TILE_SIZE/2-DOT_SIZE));
                     }
                     //  diagonals
-                    if (CHECK_QUEEN_DIAGONALS) {
+                    if (checkQueenDiagonals(row, col, queen)) {
                         dot.setPosition(sf::Vector2f(col*TILE_SIZE+TILE_SIZE/2-DOT_SIZE, 
                                                      row*TILE_SIZE+TILE_SIZE/2-DOT_SIZE));
                     }
@@ -128,7 +121,6 @@ class Board {
                 }
             }
         }
-
 
         //  detects click and based on where user clicked (un)highlights tiles
         void clicked(Queen &queen)
@@ -143,28 +135,30 @@ class Board {
         }
 
     private: 
+        //  checks if user clicked on queen
         bool clickedOnQueen(Queen &queen)
         {
-            return (CHECK_MOUSEX_AND_Q_COL && CHECK_MOUSEY_AND_Q_ROW);
+            return (compareMousePosAndNum(mousePos.x, queen.col) && compareMousePosAndNum(mousePos.y, queen.row));
         }
 
+        //  checks if user clicked on tile queen can move to thus is highlighted
         void clickedOnHighlighted(Queen &queen)
         {
             //  rows
-            if (CHECK_MOUSEY_AND_Q_ROW) {
+            if (compareMousePosAndNum(mousePos.y, queen.row)) {
                 queen.col = mousePos.x / 100;
                 return;
             }
             //  cols
-            if (CHECK_MOUSEX_AND_Q_COL) {
+            if (compareMousePosAndNum(mousePos.x, queen.col)) {
                 queen.row = mousePos.y / 100;
                 return;
             }
             //  diagonals 
             for (int row = 0; row < N; row++) {
                 for (int col = 0; col < N; col++) {
-                    if (CHECK_QUEEN_DIAGONALS) {
-                        if (CHECK_MOUSE_XY_AND_ROW_COL) {
+                    if (checkQueenDiagonals(row, col, queen)) {
+                        if (compareMousePosAndNum(mousePos.x, col) && compareMousePosAndNum(mousePos.y, row)) {
                             queen.row = mousePos.y / 100;
                             queen.col = mousePos.x / 100;
                             return;
@@ -172,6 +166,17 @@ class Board {
                     }
                 }
             }
+        }
+
+        //  decides if tile is on queen's diagonals
+        bool checkQueenDiagonals(int &row, int &col, Queen &queen)
+        {
+            return (row + col == queen.row + queen.col || row - col == queen.row - queen.col);
+        }   
+
+        //  decides if user clicked on certain tile
+        bool compareMousePosAndNum(int mousePos, int &num) {
+            return (mousePos > num * TILE_SIZE && mousePos < num * TILE_SIZE + TILE_SIZE);
         }
 };
 
