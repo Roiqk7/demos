@@ -199,12 +199,11 @@ void sfml(Board &board, Queen &queen);                        //  draws on the s
 int main()
 {
     int startingRow = 0, startingCol = 4;
-    while (true) {
-        Board board = Board();
-        Queen queen = Queen(startingRow, startingCol);
+    Board board = Board();
+    Queen queen = Queen(startingRow, startingCol);
 
-        sfml(board, queen);
-    }
+    sfml(board, queen);
+     
     return SUCCESS;
 }
 
