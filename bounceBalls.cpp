@@ -1,10 +1,14 @@
 // this program lets user spawn random balls on click and bounce them around
 
 /*
-    TODO collision sometimes works perfectly but mostly bad
+    TODO collision works but needs to be optimized in these ways:
+        -change directory is 
+        -account for vel in collisions 
+    TODO push out
 */
 
 
+#include <array>
 #include <chrono>
 #include <iostream>
 #include <SFML/Graphics.hpp>
@@ -36,10 +40,11 @@ class Ball {
         sf::CircleShape circle;
         sf::Vector2i mousePos;
         int radius;
+        std::array<float, 2> center;
         // movement
         float x, y;
         float xVel, yVel;
-        bool stationary;
+        float vel;
 
         // gives ball random color, size and puts it in the middle of where user clicked
         Ball() {
@@ -59,6 +64,8 @@ class Ball {
             xVel = rand()%(int) VELOCITY - VELOCITY/2;      
             yVel = rand()%(int) VELOCITY - VELOCITY/2;
             stationary = false;
+            // collision
+            closestDistance = closestIndex = 9999;
         }
 
         void render() 
@@ -69,9 +76,9 @@ class Ball {
 
         void move(std::vector<Ball> &balls, size_t &ballCount)
         {
-            checkCollision(balls, ballCount);
+            update();
             if (!stationary) {
-                checkStationary();
+                if (ballCount > 1) checkCollision(balls, ballCount);
                 checkBorder();
                 x += xVel;
                 y += yVel;
@@ -81,33 +88,23 @@ class Ball {
         }
 
     private:  
+        bool stationary;    
+        float closestDistance, closestIndex;
+
+        void update()
+        {
+            checkStationary();
+            if (!stationary) {
+                center[0] = x + radius, center[1] = y + radius;
+                vel = sqrt((xVel*xVel)+(yVel*yVel));
+            }
+        }
+
+    // movement
         void checkBorder()
         {
             if (y + (2*radius) + yVel >= HEIGHT || y + yVel < 0) changeDirection(yVel);
             if (x + (2*radius) + xVel >= WIDTH || x + xVel < 0) changeDirection(xVel);
-        }
-
-        void checkStationary()
-        {
-            if (abs(xVel) < 0.1 && abs(yVel) < 0.1) stationary = true;
-        }
-
-        void checkCollision(std::vector<Ball> &balls, size_t &ballCount)
-        {
-            // eliminate all balls that are too far away 
-            for (size_t i = 0; i < ballCount; i++) {
-                if (x == balls[i].x && y == balls[i].y) continue;
-                float xDis, yDis;
-                float distance;
-                xDis = abs(x-balls[i].x);
-                yDis = abs(y-balls[i].y);
-                distance = sqrt((xDis*xDis)+(yDis*yDis));
-                if (distance < radius + balls[i].radius) {
-                    balls[i].stationary = false;
-                    velAfterCollision(xVel, yVel, balls[i].xVel, balls[i].yVel);
-                    changeDirection(xVel, yVel, balls[i].xVel, balls[i].yVel);
-                }
-            }
         }
 
         void changeDirection(float &vel)
@@ -115,12 +112,38 @@ class Ball {
             vel *= -1;
         }
 
-        void changeDirection(float &aVel, float &bVel, float &cVel, float &dVel)
+        void checkStationary()
         {
-            aVel *= -1;
-            bVel *= -1;
-            cVel *= -1;
-            dVel *= -1;
+            if (abs(xVel) < 0.1 && abs(yVel) < 0.1) stationary = true;
+        }
+
+    // collision 
+        void checkCollision(std::vector<Ball> &balls, size_t &ballCount)
+        {
+            for (size_t i = 0; i < ballCount; i++) {
+                if (x == balls[i].x && y == balls[i].y) continue;
+
+                float xDis, yDis;
+                xDis = abs((center[0])-(balls[i].center[0]));
+                yDis = abs((center[1])-(balls[i].center[1]));
+                float distance;
+                distance = sqrt((xDis*xDis)+(yDis*yDis));
+
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestIndex = i;
+                }
+                else continue;
+
+                if (distance-vel <= radius + balls[i].radius) {
+                    balls[i].stationary = false;
+                    velAfterCollision(xVel, yVel, balls[i].xVel, balls[i].yVel);
+                    changeDirection(xVel, yVel, balls[i].xVel, balls[i].yVel);
+                }
+            }
+
+            visualizeDistance(center[0], center[1], 
+                balls[closestIndex].center[0], balls[closestIndex].center[1]);
         }
 
         // ! not working, push out feature may be needed
@@ -133,6 +156,24 @@ class Ball {
             cVel = newXVel;
             //bVel = newYVel;
             dVel = newYVel;
+        }
+
+        void changeDirection(float &aVel, float &bVel, float &cVel, float &dVel)
+        {
+            aVel *= -1;
+            bVel *= -1;
+            cVel *= -1;
+            dVel *= -1;
+        }
+
+        // ! delete
+        void visualizeDistance(float &aX, float &aY, float &bX, float &bY)
+        {
+            sf::Vertex line[] = {
+                sf::Vertex(sf::Vector2f(aX, aY)),
+                sf::Vertex(sf::Vector2f(bX, bY))
+            };
+            window.draw(line, 2, sf::Lines);
         }
 };
 
