@@ -5,6 +5,10 @@
         -change directory is 
         -account for vel in collisions 
     TODO push out
+    ? user can select ball, hold click on it, add strength by dragging and shoot
+        -if user clicks on ball and doesn't release
+        -speedometer pops up showing direction and strength
+        -calculate coords of cursor, add opposite values to velocities
 */
 
 
@@ -100,7 +104,6 @@ class Ball {
             }
         }
 
-    // movement
         void checkBorder()
         {
             if (y + (2*radius) + yVel >= HEIGHT || y + yVel < 0) changeDirection(yVel);
@@ -117,9 +120,19 @@ class Ball {
             if (abs(xVel) < 0.1 && abs(yVel) < 0.1) stationary = true;
         }
 
-    // collision 
+    /*
+                                                              
+         ####   ####  #      #      #  ####  #  ####  #    # 
+        #    # #    # #      #      # #      # #    # ##   # 
+        #      #    # #      #      #  ####  # #    # # #  # 
+        #      #    # #      #      #      # # #    # #  # # 
+        #    # #    # #      #      # #    # # #    # #   ## 
+         ####   ####  ###### ###### #  ####  #  ####  #    # 
+                                                      
+    */
         void checkCollision(std::vector<Ball> &balls, size_t &ballCount)
         {
+            std::vector<int> closeBallIndexes;
             for (size_t i = 0; i < ballCount; i++) {
                 if (x == balls[i].x && y == balls[i].y) continue;
 
@@ -127,7 +140,7 @@ class Ball {
                 xDis = abs((center[0])-(balls[i].center[0]));
                 yDis = abs((center[1])-(balls[i].center[1]));
                 float distance;
-                distance = sqrt((xDis*xDis)+(yDis*yDis));
+                distance = getDistance(xDis, yDis);
 
                 if (distance < closestDistance) {
                     closestDistance = distance;
@@ -135,7 +148,7 @@ class Ball {
                 }
                 else continue;
 
-                if (distance-vel <= radius + balls[i].radius) {
+                if (closestDistance-vel <= radius + balls[i].radius) {
                     balls[i].stationary = false;
                     velAfterCollision(xVel, yVel, balls[i].xVel, balls[i].yVel);
                     changeDirection(xVel, yVel, balls[i].xVel, balls[i].yVel);
@@ -146,16 +159,20 @@ class Ball {
                 balls[closestIndex].center[0], balls[closestIndex].center[1]);
         }
 
-        // ! not working, push out feature may be needed
+        float getDistance(float &x, float &y)
+        {
+            return sqrt((x*x)+(y*y));
+        }
+
         void velAfterCollision(float &aVel, float &bVel, float &cVel, float &dVel)
         {
             float newXVel, newYVel;
             newXVel = (abs(aVel)+abs(cVel))/2;
             newYVel = (abs(bVel)+abs(dVel))/2;
-            //aVel = newXVel;
-            cVel = newXVel;
-            //bVel = newYVel;
-            dVel = newYVel;
+            aVel = newXVel;
+            cVel = -newXVel;
+            bVel = newYVel;
+            dVel = -newYVel;
         }
 
         void changeDirection(float &aVel, float &bVel, float &cVel, float &dVel)
@@ -174,7 +191,7 @@ class Ball {
                 sf::Vertex(sf::Vector2f(bX, bY))
             };
             window.draw(line, 2, sf::Lines);
-        }
+        }                 
 };
 
 
