@@ -7,8 +7,8 @@
 #include <array>
 #include <chrono>
 #include <iostream>
-#include <SFML/Graphics.hpp>
 #include <random>
+#include <SFML/Graphics.hpp>
 #include <vector>
 
 // window
@@ -41,7 +41,7 @@ class Ball {
         float x, y;                     // coordinates of the top left of the ball
         int radius;                     
         bool clicked;                   // used to initiate aiming process.
-        bool visualize;
+        bool visualize;                 // is turned on by user
 
         // gives ball random color, size and puts it in the middle of where user clicked
         Ball() { 
@@ -77,11 +77,13 @@ class Ball {
             return distance;
         }
 
+        // unleash chaos!
         void chaos()
         {
             setRandomParameters();
         }
 
+        // shoot!
         void shoot()
         {
             xVel = (getCoordDistance(x, cursorPos.x)/2)*calculateSign(x, cursorPos.x);
