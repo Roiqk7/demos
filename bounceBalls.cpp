@@ -3,6 +3,7 @@
 // which are available in the console upon starting the program. 
 // Enjoy!
 
+// TODO let the user turn on gravity
 
 #include <array>
 #include <chrono>
@@ -38,9 +39,10 @@ sf::RenderWindow window(sf::VideoMode(sf::Vector2u(WIDTH, HEIGHT)), "Bounce Ball
 
 class Ball {
     public:
-        float x, y;                     // coordinates of the top left of the ball
+        float x, y;                     // coordinates of the center of the ball
         int radius;                     
-        bool clicked;                   // used to initiate aiming process.
+        bool aim;                       // used to initiate aiming process.
+        bool drag;                      // used to initiate dragging process     
         bool visualize;                 // is turned on by user
 
         // gives ball random color, size and puts it in the middle of where user clicked
@@ -48,7 +50,8 @@ class Ball {
             srand(clock()); 
             setRandomParameters();
             setPosition();
-            clicked = false;
+            aim = false;
+            drag = false;
             visualize = false;
         }
 
@@ -62,7 +65,7 @@ class Ball {
                     checkBorder();
                     move();
                 }
-                if (clicked) visualizeShoot();
+                if (aim) visualizeLine(cursorPos.x, cursorPos.y);
             }
         }
 
@@ -88,13 +91,13 @@ class Ball {
         {
             xVel = (getCoordDistance(x, cursorPos.x)/2)*calculateSign(x, cursorPos.x);
             yVel = (getCoordDistance(y, cursorPos.y)/2)*calculateSign(y, cursorPos.y);
-            clicked = false;
         }
 
     private:  
         // Ball()
         sf::CircleShape circle;
-        sf::Vector2i cursorPos;   
+        sf::Vector2i cursorPos; 
+        float cursorVel;  
         std::uint8_t r, g, b; 
         // update
         std::vector<std::array<float, 2>> closeBalls;   // holds indexes at [0] and distances at [1] of all nearby balls 
@@ -104,7 +107,7 @@ class Ball {
         float xVel, yVel;       // holds the velocity
         float vel;              // holds overall velocity
 
-        // removes the ball if even single pixel is out of the window
+        // removes the ball if the ball somehow gets completely out of the window
         bool checkIfOutOfWindow()
         {
             pushIntoWindow();
@@ -134,6 +137,7 @@ class Ball {
             setRandomSpeed();
         } 
 
+        // sets position of the ball to cursor
         void setPosition()
         {
             cursorPos = sf::Mouse::getPosition(window);
@@ -162,7 +166,7 @@ class Ball {
                 getCloseBalls(balls, ballCount);
                 checkDistanceWithCloseBalls(balls);
             }
-            if (clicked) cursorPos = sf::Mouse::getPosition(window);
+            if (aim || drag) handleCursor();
         }
 
         /*                                                          
@@ -259,7 +263,6 @@ class Ball {
             }
         }
 
-        // ! improve
         // push back into window
         void pushIntoWindow()
         {
@@ -267,6 +270,31 @@ class Ball {
             while (x + radius >= WIDTH) x--;
             while (y - radius <= 0) y++;
             while (y + radius >= HEIGHT) y--;
+        }
+
+        /*                                              
+             ####  #    # #####   ####   ####  #####  
+            #    # #    # #    # #      #    # #    # 
+            #      #    # #    #  ####  #    # #    # 
+            #      #    # #####       # #    # #####  
+            #    # #    # #   #  #    # #    # #   #  
+             ####   ####  #    #  ####   ####  #    # 
+            Everything related to cursor is handled here. 
+            Well technically it handles action... but the 
+            action is dependant on the cursor... hmmm...              
+        */
+
+        void handleCursor()
+        {
+            if (aim) cursorPos = sf::Mouse::getPosition(window);
+            if (drag) {
+                stationary = true;
+                float oldCursorPosX, oldCursorPosY;
+                oldCursorPosX = cursorPos.x, oldCursorPosY = cursorPos.y;
+                setPosition();
+                xVel = getCoordDistance(oldCursorPosX, x)*calculateSign(cursorPos.x, oldCursorPosX);
+                yVel = getCoordDistance(oldCursorPosY, y)*calculateSign(cursorPos.y, oldCursorPosY);
+            }
         }
 
         /*                                                                                    
@@ -279,22 +307,12 @@ class Ball {
                                                                   
         */
 
-        // visualizes distance between balls. Is shown on user request
-        void visualizeCloseBallDistance(Ball &ball)
+        // draws line from center of the ball to entered position
+        template <typename T, typename U> void visualizeLine(T &x2, U &y2)
         {
             sf::Vertex line[] = {
                 sf::Vertex(sf::Vector2f(x, y)),
-                sf::Vertex(sf::Vector2f(ball.x, ball.y))
-            };
-            window.draw(line, 2, sf::Lines);
-        }
-
-        // visualizes strength and direction. Is always shown
-        void visualizeShoot()
-        {
-            sf::Vertex line[] = {
-                sf::Vertex(sf::Vector2f(x, y)),
-                sf::Vertex(sf::Vector2f(cursorPos.x, cursorPos.y))
+                sf::Vertex(sf::Vector2f(x2, y2))
             };
             window.draw(line, 2, sf::Lines);
         }
@@ -368,7 +386,7 @@ class Ball {
             for (int i = 0; i < closeBallsCount; i++) {
                 if (willCollide(balls[closeBalls[i][0]])) velAfterCollision(balls[closeBalls[i][0]]);
                 if (isInsideOf(balls[closeBalls[i][0]], closeBalls[i][1])) push(balls[closeBalls[i][0]]);
-                if (visualize) visualizeCloseBallDistance(balls[closeBalls[i][0]]);
+                if (visualize) visualizeLine(balls[closeBalls[i][0]].x, balls[closeBalls[i][0]].y);
             }
         } 
 
@@ -408,7 +426,7 @@ class Ball {
 void sfml();
 void doEveryFrame(std::vector<Ball> &balls, size_t &ballCount, std::array<std::uint8_t, 3> &bgRGB);
 void spawnBall(std::vector<Ball> &balls, size_t &ballCount);
-void handleShoot(Ball &ball, int &ballSelected);
+void handleAction(Ball &ball, int &ballSelected, bool &action);
 int getClickedBall(std::vector<Ball> &balls, size_t &ballCount, sf::Vector2i mousePos);
 
 
@@ -425,13 +443,21 @@ int getClickedBall(std::vector<Ball> &balls, size_t &ballCount, sf::Vector2i mou
 
 int main()
 {
+    const int numOfInputs = 6;
+    std::array<char, numOfInputs> buttons = {'B', 'D', 'S', 'E', 'V', 'X'};
+    std::array<std::string, numOfInputs> descriptions = {
+        "to bulk spawn 5 balls",
+        "to drag",
+        "to aim and then again to shoot!",
+        "for chaos",
+        "for visualizations",
+        "to reset"
+    };
     std::cout << "Welcome to bounce balls!\n\n";
     std::cout << "Click to spawn a ball\n";
-    std::cout << "Press (B) to bulk spawn 10 balls\n";
-    std::cout << "Press (S) while hovering over ball to select it.\nThen select direction and strength and press (S) again to shoot\n";
-    std::cout << "Press (E) for chaos\n";
-    std::cout << "Press (E) for visualizations\n";
-    std::cout << "Press (X) to clear window\n";
+    for (int i = 0; i < numOfInputs; i++) {
+        std::cout << "Press (" << buttons[i] << ") " << descriptions[i] << '\n';
+    }
     sfml();
 }
 
@@ -444,10 +470,10 @@ int main()
           ## ##       ##     ## ##       
     ##    ## ##       ##     ## ##       
      ######  ##       ##     ## ######## 
+    Draws on the window.
 */
 
 
-// visualizes the balls
 void sfml()
 {
     window.setFramerateLimit (60);
@@ -472,11 +498,17 @@ void sfml()
             }
             // keyboard events
             if (event.type == sf::Event::KeyPressed) {
-                // clear
-                if (event.key.code == sf::Keyboard::X) return sfml();
                 // mass spawn
                 if (event.key.code == sf::Keyboard::B) {
                     for (int i = 0; i < 5; i++) spawnBall(balls, ballCount);
+                }
+                // drag
+                if (event.key.code == sf::Keyboard::D) {
+                    if (ballSelected == NO_BALL_SELECTED) {
+                        sf::Vector2i cursorPos = sf::Mouse::getPosition(window);
+                        ballSelected = getClickedBall(balls, ballCount, cursorPos);
+                    }
+                    handleAction(balls[ballSelected], ballSelected, balls[ballSelected].drag);
                 }
                 // shoot
                 if (event.key.code == sf::Keyboard::S) {
@@ -484,17 +516,19 @@ void sfml()
                         sf::Vector2i cursorPos = sf::Mouse::getPosition(window);
                         ballSelected = getClickedBall(balls, ballCount, cursorPos);
                     }
-                    handleShoot(balls[ballSelected], ballSelected);
-                }
-                // visualize
-                if (event.key.code == sf::Keyboard::V) {
-                    for (size_t i = 0; i < ballCount; i++) balls[i].visualize = true;
+                    handleAction(balls[ballSelected], ballSelected, balls[ballSelected].aim);
                 }
                 // chaos
                 if (event.key.code == sf::Keyboard::E) {
                     for (size_t i = 0; i < ballCount; i++) balls[i].chaos();
                     bgRGB[0] = rand()%255, bgRGB[1] = rand()%255, bgRGB[2] = rand()%255;
                 }
+                // visualize
+                if (event.key.code == sf::Keyboard::V) {
+                    for (size_t i = 0; i < ballCount; i++) balls[i].visualize = true;
+                }
+                // clear
+                if (event.key.code == sf::Keyboard::X) return sfml();
             }
         }
         doEveryFrame(balls, ballCount, bgRGB);
@@ -522,12 +556,15 @@ void spawnBall(std::vector<Ball> &balls, size_t &ballCount)
 }
 
 
-void handleShoot(Ball &ball, int &ballSelected)
+// handles shooting and dragging of the ball
+void handleAction(Ball &ball, int &ballSelected, bool &action)
 {
-    if (!ball.clicked && ballSelected != NO_BALL_SELECTED) {
-        ball.clicked = true;
+    if (!action && ballSelected != NO_BALL_SELECTED) action = true;
+    else if (action) {
+        if (ball.aim) ball.shoot();
+        action = false;
+        ballSelected = NO_BALL_SELECTED;
     }
-    else if (ball.clicked) ball.shoot(), ballSelected = NO_BALL_SELECTED;
 }
 
 
