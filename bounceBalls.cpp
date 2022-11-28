@@ -3,10 +3,8 @@
 // which are available in the console upon starting the program. 
 // Enjoy!
 
-// TODO let the user turn on gravity
 
 #include <array>
-#include <chrono>
 #include <iostream>
 #include <random>
 #include <SFML/Graphics.hpp>
@@ -42,7 +40,7 @@ class Ball {
         float x, y;                     // coordinates of the center of the ball
         int radius;                     
         bool aim;                       // used to initiate aiming process.
-        bool drag;                      // used to initiate dragging process     
+        bool drag;                      // used to initiate dragging process
         bool visualize;                 // is turned on by user
 
         // gives ball random color, size and puts it in the middle of where user clicked
@@ -106,6 +104,7 @@ class Ball {
         bool stationary;        // used to decide what to do based on the state
         float xVel, yVel;       // holds the velocity
         float vel;              // holds overall velocity
+        float force;            // pull force of the gravity
 
         // removes the ball if the ball somehow gets completely out of the window
         bool checkIfOutOfWindow()
@@ -162,7 +161,7 @@ class Ball {
             checkStationary();
             vel = getDistance(xVel, yVel);
             if (ballCount > 1) {
-                if (balls[0].visualize && !visualize) visualize = true;
+                updateBasedOnFirst(balls[0]);
                 getCloseBalls(balls, ballCount);
                 checkDistanceWithCloseBalls(balls);
             }
@@ -360,6 +359,12 @@ class Ball {
             else stationary = false;
         }
 
+        // updates values for all balls based on the first ball
+        void updateBasedOnFirst( Ball &first)
+        {
+            visualize = first.visualize;
+        }
+
         // used in collision and push calculations
         void getCloseBalls(std::vector<Ball> &balls, size_t &ballCount)
         {
@@ -525,7 +530,8 @@ void sfml()
                 }
                 // visualize
                 if (event.key.code == sf::Keyboard::V) {
-                    for (size_t i = 0; i < ballCount; i++) balls[i].visualize = true;
+                    if (!balls[0].visualize) balls[0].visualize = true;
+                    else balls[0].visualize = false;
                 }
                 // clear
                 if (event.key.code == sf::Keyboard::X) return sfml();
@@ -540,9 +546,7 @@ void sfml()
 void doEveryFrame(std::vector<Ball> &balls, size_t &ballCount, std::array<std::uint8_t, 3> &bgRGB)
 {
     window.clear(sf::Color{bgRGB[0], bgRGB[1], bgRGB[2]});
-    for (size_t i = 0; i < ballCount; i++) {
-        balls[i].call(balls, ballCount);
-    }
+    for (size_t i = 0; i < ballCount; i++) balls[i].call(balls, ballCount);
     window.display();
 }
 
@@ -573,7 +577,8 @@ int getClickedBall(std::vector<Ball> &balls, size_t &ballCount, sf::Vector2i cur
 {
     float distance;
     for (size_t i = 0; i < ballCount; i++) {
-        distance = balls[i].getDistanceFromCoordPairs(balls[i].x, cursorPos.x, balls[i].y, cursorPos.y);
+        Ball ball = balls[i];
+        distance = balls[i].getDistanceFromCoordPairs(ball.x, cursorPos.x, ball.y, cursorPos.y);
         if (distance < balls[i].radius) {
             return i;
         }
